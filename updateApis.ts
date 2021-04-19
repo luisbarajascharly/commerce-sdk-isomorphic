@@ -10,14 +10,7 @@ import fs from 'fs-extra';
 import { updateApis } from './scripts/utils';
 
 const API_NAMES = [
-  'shopper-baskets',
-  'shopper-customers',
-  'shopper-gift-certificates',
-  'shopper-login',
-  'shopper-orders',
-  'shopper-products',
-  'shopper-promotions',
-  'shopper-search',
+  'spike-4',
 ];
 
 const OLD_APIS_PATH = path.join(__dirname, 'temp/oldApis');

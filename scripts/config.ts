@@ -34,4 +34,5 @@ export const ASSET_OBJECT_MAP: {[key: string]: string} = {
   'shopper-search': 'a003k00000UHwuFAAT',
   'shopper-stores': 'a003k00000UHwuPAAT',
   'source-code-groups': 'a003k00000UHvpTAAT',
+  'spike-4': 'unknown',
 };
