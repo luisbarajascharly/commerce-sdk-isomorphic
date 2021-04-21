@@ -3,8 +3,7 @@ title: Spike 4
 version: v1
 mediaType: application/json
 protocols: HTTPS
-baseUri: https://spike-4.herokuapp.com/spike-4/{version}
-
+baseUri: https://spike-4.herokuapp.com/{version}
 description: This is for Spike 4
 
 uses:
@@ -767,67 +766,185 @@ types:
         type: integer
         format: int32
         example: 5
+  SpikeAuthToken: 
+    type: object
+    properties:
+      token: string      
+  B2CAuthRequest:
+    description: Document representing the authentication request type.
+    properties:
+      type:
+        description: 'Type of authentication request: guest, credentials or refresh'
+        type: string
+        enum:
+          - guest
+          - credentials
+          - refresh
+        required: false
+        example: credentials
+  B2BAuthRequest:
+    description: Document representing the authentication request type.
+    properties: 
+      grant_type:
+        type: string
+      clientId: 
+        type: string
+      clientSecret:
+        type: string
+      username:
+        type: string
+      password:
+        type: string
+  Search:
+    type: object
+    properties:
+      searchTerm:
+        description: The query phrase to search for. For example to search for a product "shirt", type q=shirt.
+        maxLength: 50
+        type: string
+        required: false
+      refine:
+        description: |-
+          Parameter that represents a refinement attribute or values pair. Refinement attribute ID and
+                      values are separated by '='. Multiple values are supported by a subset of refinement attributes and
+                      can be provided by separating them using a pipe (URL
+                      encoded = "|") i.e. refine=c_refinementColor=red|green|blue. Value ranges can be specified like this: refine=price=(100..500) . Multiple refine parameters can be provided by using the refine as the key i.e refine=price=(0..10)&refine=c_refinementColor=green. The refinements can be a collection of custom defined attributes IDs and the system defined attributes IDs but the search can only accept a total of 9 refinements at a time.
+                      The following system refinement attribute ids are supported:
+                        
+                      cgid: Allows refinement per single category ID. Multiple category ids are not supported.
+                      price: Allows refinement per single price range. Multiple price ranges are not supported.
+                      pmid: Allows refinement per promotion ID.
+                      htypes: Allow refinement by including only the provided hit types. Accepted types are 'product', 'master', 'set', 'bundle', 'slicing_group' (deprecated), 'variation_group'.
+                      orderable_only: Unavailable products are excluded from the search results if true is set. Multiple refinement values are not supported.      
+        type: string[]
+        required: false
+      sort:
+        description: The ID of the sorting option to sort the search hits.
+        type: string
+        required: false
+      currency:
+        description: The currency mnemonic specified for price. This parameter is effective only if the returned results contain prices.
+        type: CommerceCloudStandards.CurrencyCode
+        required: false
+      locale:
+        type: CommerceCloudStandards.LocaleCode
+        required: false
 
 /organizations/{organizationId}:
   type: CommerceCloudStandards.Organization
-  /products/{id}:
-      get:
-        description: 'Allows access to product details for a single product ID. Only products that are online and assigned to a site catalog are returned. Along with product details, the availability, images, price, bundled_products, set_products, recommedations, product options, variations, and promotions for the products will be included, as appropriate.'
-        displayName: getProduct
-        is: 
+  /login:
+    /b2c:
+      post:
+        displayName: getB2CShopperToken
+        is:
           - CommerceCloudStandards.SiteSpecific:
           - ApiStandards.RateLimited:
               responseStatus: 200
           - ApiStandards.RateLimited:
               responseStatus: 400
           - ApiStandards.RateLimited:
-              responseStatus: 401 
-          - ApiStandards.RateLimited:
-              responseStatus: 404       
-          - ProdTraits.Unauthorized
-          - ProdTraits.BadRequest
-          - ProdTraits.NotFound
+              responseStatus: 401
+          # - CustomerTraits.BadRequest
+          # - CustomerTraits.CustomerAuthenticationFailed
         responses:
           '200':
-            description: Success.
+            description: Success
             body:
               application/json:
-                type: Product
-                examples:
-                  product: !include Examples/product-example.raml
+                type: SpikeAuthToken
+        headers:
+          Authorization:
+            description: |-
+                              Authorization:Basic for type credentials
+                              Authorization:Bearer for type refresh
+            type: string
+            required: false
         queryParameters:
-          inventoryIds:
-            description: The optional inventory list IDs, for which the availability should be shown (comma-separated, max 5 inventoryListIDs).
+          clientId:
             type: string
-            required: false
-            example: "Site1InventoryList,Site2InventoryList"
-          currency:
-            description: The currency mnemonic specified for price.
-            type: string
-            required: false
-            example: USD
-          locale:
-            description: The locale context.
-            type: string
-            required: false
-            example: default
-          allImages:
-            description: The flag that indicates whether to retrieve the whole image model for the requested product.
-            type: boolean
-            required: false
-            example: false
-        securedBy:
-          - CommerceCloudStandards.ShopperToken: { scopes: [sfcc.shopper-products] }
-      uriParameters:
-        id:
-          description: The ID of the requested product.
-          maxLength: 100
+            description: Client ID for application identification
+            required: true
+            example: "f45f0e4f-fa44-63gh-9b35-91dc1dd78e82" 
+        body:
+          application/json:
+            type: B2CAuthRequest
+            example:  { 
+                "type" : "guest" 
+              }
+    /b2b:
+      post:
+        description: Authenticate as a B2Ce or a 1C/B2B user
+        displayName: getB2BToken
+        is: 
+          - CommerceCloudStandards.SiteSpecific:
+        body:
+          application/json:
+            type: B2BAuthRequest
+        responses:
+          '200':
+            description: Success
+            body:
+              application/json:
+                type: SpikeAuthToken
+
+  /products/{id}:
+    get:
+      description: 'Allows access to product details for a single product ID. Only products that are online and assigned to a site catalog are returned. Along with product details, the availability, images, price, bundled_products, set_products, recommedations, product options, variations, and promotions for the products will be included, as appropriate.'
+      displayName: getProduct
+      is: 
+        - CommerceCloudStandards.SiteSpecific:
+        - ApiStandards.RateLimited:
+            responseStatus: 200
+        - ApiStandards.RateLimited:
+            responseStatus: 400
+        - ApiStandards.RateLimited:
+            responseStatus: 401 
+        - ApiStandards.RateLimited:
+            responseStatus: 404       
+        - ProdTraits.Unauthorized
+        - ProdTraits.BadRequest
+        - ProdTraits.NotFound
+      responses:
+        '200':
+          description: Success.
+          body:
+            application/json:
+              type: Product
+              examples:
+                product: !include Examples/product-example.raml
+      queryParameters:
+        inventoryIds:
+          description: The optional inventory list IDs, for which the availability should be shown (comma-separated, max 5 inventoryListIDs).
           type: string
-          example: apple-ipod-shuffle
+          required: false
+          example: "Site1InventoryList,Site2InventoryList"
+        currency:
+          description: The currency mnemonic specified for price.
+          type: string
+          required: false
+          example: USD
+        locale:
+          description: The locale context.
+          type: string
+          required: false
+          example: default
+        allImages:
+          description: The flag that indicates whether to retrieve the whole image model for the requested product.
+          type: boolean
+          required: false
+          example: false
+      securedBy:
+        - CommerceCloudStandards.ShopperToken: { scopes: [sfcc.shopper-products] }
+    uriParameters:
+      id:
+        description: The ID of the requested product.
+        maxLength: 100
+        type: string
+        example: apple-ipod-shuffle
 
   /product-search:
     type: CommerceCloudStandards.Organization
-    get:
+    post:
       description: |-
         Provides keyword and refinement search functionality for products. Only returns the product ID, link, and name in
         the product search hit. The search result contains only products that are online and assigned to site catalog.
@@ -858,34 +975,6 @@ types:
       queryParameters:
         siteId:
           type: CommerceCloudStandards.SiteId
-        q:
-          description: The query phrase to search for. For example to search for a product "shirt", type q=shirt.
-          maxLength: 50
-          type: string
-          required: false
-        refine:
-          description: |-
-            Parameter that represents a refinement attribute or values pair. Refinement attribute ID and
-                        values are separated by '='. Multiple values are supported by a subset of refinement attributes and
-                        can be provided by separating them using a pipe (URL
-                        encoded = "|") i.e. refine=c_refinementColor=red|green|blue. Value ranges can be specified like this: refine=price=(100..500) . Multiple refine parameters can be provided by using the refine as the key i.e refine=price=(0..10)&refine=c_refinementColor=green. The refinements can be a collection of custom defined attributes IDs and the system defined attributes IDs but the search can only accept a total of 9 refinements at a time.
-                        The following system refinement attribute ids are supported:
-                          
-                        cgid: Allows refinement per single category ID. Multiple category ids are not supported.
-                        price: Allows refinement per single price range. Multiple price ranges are not supported.
-                        pmid: Allows refinement per promotion ID.
-                        htypes: Allow refinement by including only the provided hit types. Accepted types are 'product', 'master', 'set', 'bundle', 'slicing_group' (deprecated), 'variation_group'.
-                        orderable_only: Unavailable products are excluded from the search results if true is set. Multiple refinement values are not supported.                               
-          type: string[]
-          required: false
-        sort:
-          description: The ID of the sorting option to sort the search hits.
-          type: string
-          required: false
-        currency:
-          description: The currency mnemonic specified for price. This parameter is effective only if the returned results contain prices.
-          type: CommerceCloudStandards.CurrencyCode
-          required: false
-        locale:
-          type: CommerceCloudStandards.LocaleCode
-          required: false
+      body:
+        application/json:
+          type: Search
