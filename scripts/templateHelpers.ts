@@ -92,10 +92,15 @@ export const getObjectIdByAssetId = (assetId: string): string => {
  */
 export const formatForTsDoc = (str: string): string => {
   // Brackets are special to TSDoc and less than / greater than are interpreted as HTML
+  if (!!!str.toString()) {
+    return "";
+  }
+
   const symbolsEscaped = str
     .toString()
     .replace(/([^\\])(["{}<>]+)/g, (m) => Array.from(m).join('\\'));
   // Double escaped newlines are replaced with real newlines
+  console.log(symbolsEscaped);
   const newlinesUnescaped = symbolsEscaped.replace(/\\n/g, '\n');
   // Double escaped tabs are replaced with a single space
   const tabsUnescaped = newlinesUnescaped.replace(/(\\t)+/g, ' ');
